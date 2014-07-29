@@ -1,0 +1,113 @@
+<?xml version="1.0"?>
+<!--*************************************************************************
+Copyright (c) 2006, Colorado School of Mines and others. All rights reserved.
+This program and accompanying materials are made available under the terms of
+the Common Public License - v1.0, which accompanies this distribution, and is
+available at http://www.eclipse.org/legal/cpl-v10.html
+*************************************************************************-->
+<project name="xmw" default="compile-java" basedir=".">
+
+  <description>
+    Java packages for research by Xinming Wu
+  </description>
+
+  <!-- Project directories -->
+  <property name="src" value="${basedir}/src"/>
+  <property name="build" value="${basedir}/build"/>
+  <property name="build.cls" value="${build}/cls"/>
+  <property name="build.jar" value="${build}/jar"/>
+
+  <!-- Where is Scala? (Scala builds currently disabled) -->
+  <property environment="env"/>
+  <condition property="scala.home" value="${env}">
+    <isset property="env.CURRENTLY_DISABLED_SCALA_HOME"/>
+  </condition>
+
+  <!-- Other global settings -->
+  <property name="title" value="Xinming Wu's Java"/>
+  <property environment="env"/>
+  <path id="classpath">
+    <fileset dir="${java.home}" includes="lib/javaws.jar"/>
+    <fileset dir="${basedir}/../jtk">
+      <include name="libs/*.jar"/>
+      <include name="build/libs/edu_mines_jtk.jar"/>
+    </fileset>
+    <fileset dir="${basedir}/../idh">
+      <include name="libs/*.jar"/>
+      <include name="bench/build/libs/idh.jar"/>
+    </fileset>
+  </path>
+
+  <!-- Initialize -->
+  <target name="init">
+    <tstamp/>
+    <mkdir dir="${build}"/>
+    <mkdir dir="${build.cls}"/>
+    <mkdir dir="${build.jar}"/>
+  </target>
+
+  <!-- Compile Java sources -->
+  <target name="compile-java" depends="init">
+    <javac srcdir="${src}" destdir="${build.cls}" 
+      compiler="javac1.7"
+      memoryMaximumSize="500m"
+      fork="true"
+      debug="on" 
+      deprecation="on"
+      includeantruntime="false">
+      <compilerarg value="-Xlint:all,-serial"/>
+      <classpath refid="classpath"/>
+      <exclude name="**/old/**"/>
+      <exclude name="**/new/**"/>
+    </javac>
+  </target>
+
+  <!-- Compile Scala sources (only if SCALA_HOME defined) -->
+  <target if="scala.home" name="compile-scala" depends="init,compile-java">
+    <path id="scala.tools.classpath">
+      <pathelement location="${scala.home}/lib/scala-compiler.jar"/>
+      <pathelement location="${scala.home}/lib/scala-library.jar"/>
+    </path>
+    <path id="scala.build.classpath">
+      <pathelement location="${build.cls}"/>
+      <fileset dir="${basedir}/../../../jtk">
+        <include name="libs/*.jar"/>
+        <include name="build/libs/edu_mines_jtk.jar"/>
+      </fileset>
+      <pathelement location="${scala.home}/lib/scala-library.jar"/>
+    </path>
+    <taskdef resource="scala/tools/ant/antlib.xml">
+      <classpath refid="scala.tools.classpath"/>
+    </taskdef>
+    <scalac srcdir="${src}" 
+      destdir="${build.cls}" 
+      deprecation="on">
+      <classpath refid="scala.build.classpath"/>
+      <include name="**/*.scala"/>
+    </scalac>
+  </target>
+
+  <!-- Build Java archive -->
+  <target name="jar" depends="compile-java,compile-scala,copy-resources"
+      description="build Java archive">
+    <jar jarfile="${build.jar}/xmw.jar" basedir="${build.cls}"/>
+  </target>
+  <target name="copy-resources">
+    <copy todir="${build.cls}">
+      <fileset dir="${src}">
+        <include name="**/resources/*"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <!-- Build everything -->
+  <target name="all" depends="jar"
+      description="build everything"/>
+
+  <!-- Cleanup -->
+  <target name="clean"
+      description="delete all products of build">
+    <delete dir="${build}"/>
+  </target>
+
+</project>
